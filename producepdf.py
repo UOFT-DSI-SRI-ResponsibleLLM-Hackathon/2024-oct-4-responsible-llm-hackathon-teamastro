@@ -9,6 +9,7 @@ def convert_markdown_to_html(markdown_text):
     return markdown2.markdown(markdown_text)
 
 def convert_html_to_pdf(source_html, output_filename):
+
     # Open a file to write the PDF to
     with open(output_filename, "w+b") as result_file:
         # Convert HTML to PDF
@@ -16,13 +17,23 @@ def convert_html_to_pdf(source_html, output_filename):
     
     return pisa_status.err
 
-def markdown_to_pdf(markdown_file_path, pdf_file_path):
+def file_to_html(markdown_file_path):
+
     # Read the Markdown file
     markdown_text = read_markdown_file(markdown_file_path)
     
     # Convert Markdown to HTML
     html_text = convert_markdown_to_html(markdown_text)
-    
+
+    return html_text
+
+def markdown_to_pdf(markdown_file_path, pdf_file_path):
+
+    # Convert Markdown to HTML
+    html_text = file_to_html(markdown_file_path)
+
+    html_text = f"<html><body>{html_text}</body></html>"
+
     # Convert HTML to PDF
     result = convert_html_to_pdf(html_text, pdf_file_path)
     
@@ -30,6 +41,7 @@ def markdown_to_pdf(markdown_file_path, pdf_file_path):
         print(f"PDF created successfully at: {pdf_file_path}")
     else:
         print("Error in PDF creation")
+
 
 # Example usage
 markdown_file_path = 'example.md'
