@@ -1,16 +1,22 @@
 import streamlit as st
 from openai import OpenAI
 import producepdf as pt
+from streamlit_option_menu import option_menu
 
 import PyPDF2
 
 st.set_page_config(page_title="Resume Builder", page_icon="📝")
 
+#create the side bar
 with st.sidebar:
-    openai_api_key = st.text_input("OpenAI API Key", key="file_qa_api_key", type="password")
-
-if openai_api_key:
-    client = OpenAI(api_key=openai_api_key)
+    selected = option_menu("Options", 
+                           ["Resume builder",
+                            "Mock interview", 
+                            ], 
+                            menu_icon='robot',
+                            icons=['chat-dots-fill', 'image-fill', 'textarea-t', 'patch-question-fill'],
+                            default_index=0
+                           )
 
 st.title("📝 Resume Builder")
 
@@ -97,3 +103,5 @@ if st.session_state.generate_button:
                 file_name="generated_resume.pdf",
                 mime="application/pdf"
             )
+
+
