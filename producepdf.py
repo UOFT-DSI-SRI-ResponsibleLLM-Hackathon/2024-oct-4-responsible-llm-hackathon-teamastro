@@ -27,10 +27,7 @@ def file_to_html(markdown_file_path):
 
     return html_text
 
-def markdown_to_pdf(markdown_file_path, pdf_file_path):
-
-    # Convert Markdown to HTML
-    html_text = file_to_html(markdown_file_path)
+def markdown_to_pdf(html_text, pdf_file_path):
 
     styling = """
     @page {size: letter landscape;margin: 2cm;}
@@ -47,8 +44,14 @@ def markdown_to_pdf(markdown_file_path, pdf_file_path):
         print("Error in PDF creation")
 
 
-# Example usage
-markdown_file_path = 'example.md'
-pdf_file_path = 'output.pdf'
 
-markdown_to_pdf(markdown_file_path, pdf_file_path)
+# Main program
+if __name__ == "__main__":
+    # Example usage
+    markdown_file_path = 'example.md'
+    pdf_file_path = 'output.pdf'
+
+    # Convert Markdown to HTML
+    html_text = file_to_html(markdown_file_path)
+
+    markdown_to_pdf(html_text, pdf_file_path)
