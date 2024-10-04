@@ -35,9 +35,14 @@ def read_file(file):
 def response_to_markdown(markdown_text):
     return pt.convert_markdown_to_html(markdown_text)
 
-generate_button = st.button("Generate Analysis")
-html_text = ""
+if 'generate_button' not in st.session_state:
+    st.session_state.generate_button = False
+generate_button = st.button("Generate Analysis", key="generate_button")
+
 if generate_button:
+    st.session_state.generate_button = True
+
+if st.session_state.generate_button:
     if not openai_api_key:
         st.info("Please add your OpenAI API key in the sidebar to continue.")
     elif not uploaded_resume or not uploaded_job_posting:
