@@ -1,33 +1,38 @@
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph
-import markdown2 as markdown
+import markdown2
+from xhtml2pdf import pisa
 
 def read_markdown_file(file_path):
     with open(file_path, 'r') as file:
         return file.read()
 
-def markdown_to_pdf(markdown_text, pdf_path):
+def convert_markdown_to_html(markdown_text):
+    return markdown2.markdown(markdown_text)
+
+def convert_html_to_pdf(source_html, output_filename):
+    # Open a file to write the PDF to
+    with open(output_filename, "w+b") as result_file:
+        # Convert HTML to PDF
+        pisa_status = pisa.CreatePDF(source_html, dest=result_file)
+    
+    return pisa_status.err
+
+def markdown_to_pdf(markdown_file_path, pdf_file_path):
+    # Read the Markdown file
+    markdown_text = read_markdown_file(markdown_file_path)
+    
     # Convert Markdown to HTML
-    html_text = markdown.markdown(markdown_text)
+    html_text = convert_markdown_to_html(markdown_text)
     
-    # Create a PDF document
-    doc = SimpleDocTemplate(pdf_path, pagesize=letter)
-    styles = getSampleStyleSheet()
-    story = []
+    # Convert HTML to PDF
+    result = convert_html_to_pdf(html_text, pdf_file_path)
     
-    # Add HTML content to the PDF
-    story.append(Paragraph(html_text, styles['Normal']))
-    
-    # Build the PDF
-    doc.build(story)
+    if result == 0:
+        print(f"PDF created successfully at: {pdf_file_path}")
+    else:
+        print("Error in PDF creation")
 
 # Example usage
 markdown_file_path = 'example.md'
 pdf_file_path = 'output.pdf'
 
-markdown_text = read_markdown_file(markdown_file_path)
-markdown_to_pdf(markdown_text, pdf_file_path)
-
-print(f"PDF created at: {pdf_file_path}")
+markdown_to_pdf(markdown_file_path, pdf_file_path)
