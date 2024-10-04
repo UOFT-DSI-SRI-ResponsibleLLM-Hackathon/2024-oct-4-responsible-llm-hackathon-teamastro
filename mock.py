@@ -127,6 +127,7 @@ class MockInterviewer:
         mock_interviewer.resume_summary = data["resume_summary"]
         mock_interviewer.question_ideas = data["question_ideas"]
         return mock_interviewer
+        
 
 if __name__ == '__main__':
     job_posting_text = read_pdf("data/job_posting.pdf")
