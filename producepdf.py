@@ -30,7 +30,7 @@ def file_to_html(markdown_file_path):
 def markdown_to_pdf(html_text, pdf_file_path):
 
     styling = """
-    @page {size: letter landscape;margin: 2cm;}
+    @page {size: letter portrait;margin: 2cm;}
     """
 
     html_text = f"<html><head><style>{styling}</style></head><body>{html_text}</body></html>"
