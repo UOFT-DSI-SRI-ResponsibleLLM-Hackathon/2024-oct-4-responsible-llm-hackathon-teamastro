@@ -1,5 +1,6 @@
 import streamlit as st
 from openai import OpenAI
+import producepdf as pt
 
 import PyPDF2
 import io
@@ -68,3 +69,10 @@ if generate_button:
 
         st.write("### Suggestions")
         st.write(response.choices[0].message.content)
+
+pdf_button = st.button("Generate pdf")
+
+if pdf_button:
+    print(response.choices[0].message.content)
+
+    
