@@ -3,7 +3,6 @@ from openai import OpenAI
 import producepdf as pt
 
 import PyPDF2
-import io
 
 st.set_page_config(page_title="Resume Builder", page_icon="📝")
 
@@ -74,8 +73,3 @@ if generate_button:
         st.write(response.choices[0].message.content)  
         html_text = response_to_markdown(response.choices[0].message.content)
         pt.markdown_to_pdf(html_text, 'output_resume.pdf')
-        
-
-
-
-    
