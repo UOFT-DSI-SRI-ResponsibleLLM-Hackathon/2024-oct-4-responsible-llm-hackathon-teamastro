@@ -37,7 +37,10 @@ def response_to_markdown(markdown_text):
 
 if 'generate_button' not in st.session_state:
     st.session_state.generate_button = False
-generate_button = st.button("Generate Analysis", key="generate_button")
+if 'response' not in st.session_state:
+    st.session_state.response = ""
+
+generate_button = st.button("Generate Analysis")
 
 if generate_button:
     st.session_state.generate_button = True
@@ -67,14 +70,23 @@ if st.session_state.generate_button:
             3. Specific suggestions for improving the resume to better align with the job posting.
             4. A rewritten version of the resume that incorporates these improvements.
             """
-            response = client.chat.completions.create(model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that analyzes resumes and job postings."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=10000)
+            if st.session_state.response is not "":
+                pass
+            else:
+                response = client.chat.completions.create(model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant that analyzes resumes and job postings."},
+                        {"role": "user", "content": prompt}
+                    ], max_tokens=10000)
+                st.session_state.response = response
 
         st.write("### Suggestions")
-        st.write(response.choices[0].message.content)  
-        html_text = response_to_markdown(response.choices[0].message.content)
-        pt.markdown_to_pdf(html_text, 'output_resume.pdf')
+        st.write(st.session_state.response.choices[0].message.content)  
+
+        st.write("### Download Resume")
+
+        pdf_button = st.button("Download Resume PDF")
+
+        if pdf_button:
+            html_text = response_to_markdown(st.session_state.response.choices[0].message.content)
+            pt.markdown_to_pdf(html_text, 'output_resume.pdf')
