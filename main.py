@@ -3,7 +3,6 @@ from openai import OpenAI
 import producepdf as pt
 
 import PyPDF2
-import io
 
 st.set_page_config(page_title="Resume Builder", page_icon="📝")
 
@@ -33,9 +32,20 @@ def read_file(file):
     else:
         return "Unsupported file type"
 
+def response_to_markdown(markdown_text):
+    return pt.convert_markdown_to_html(markdown_text)
+
+if 'generate_button' not in st.session_state:
+    st.session_state.generate_button = False
+if 'response' not in st.session_state:
+    st.session_state.response = ""
+
 generate_button = st.button("Generate Analysis")
 
 if generate_button:
+    st.session_state.generate_button = True
+
+if st.session_state.generate_button:
     if not openai_api_key:
         st.info("Please add your OpenAI API key in the sidebar to continue.")
     elif not uploaded_resume or not uploaded_job_posting:
@@ -60,19 +70,23 @@ if generate_button:
             3. Specific suggestions for improving the resume to better align with the job posting.
             4. A rewritten version of the resume that incorporates these improvements.
             """
-            response = client.chat.completions.create(model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that analyzes resumes and job postings."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=10000)
+            if st.session_state.response is not "":
+                pass
+            else:
+                response = client.chat.completions.create(model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant that analyzes resumes and job postings."},
+                        {"role": "user", "content": prompt}
+                    ], max_tokens=10000)
+                st.session_state.response = response
 
         st.write("### Suggestions")
-        st.write(response.choices[0].message.content)
+        st.write(st.session_state.response.choices[0].message.content)  
 
-pdf_button = st.button("Generate pdf")
+        st.write("### Download Resume")
 
-if pdf_button:
-    print(response.choices[0].message.content)
+        pdf_button = st.button("Download Resume PDF")
 
-    
+        if pdf_button:
+            html_text = response_to_markdown(st.session_state.response.choices[0].message.content)
+            pt.markdown_to_pdf(html_text, 'output_resume.pdf')
