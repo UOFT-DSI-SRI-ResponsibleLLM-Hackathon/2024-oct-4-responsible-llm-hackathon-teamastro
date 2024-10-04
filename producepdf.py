@@ -32,7 +32,11 @@ def markdown_to_pdf(markdown_file_path, pdf_file_path):
     # Convert Markdown to HTML
     html_text = file_to_html(markdown_file_path)
 
-    html_text = "<html><style>@page {size: letter landscape;margin: 2cm;}</style><body>" + f"{html_text}</body></html>"
+    styling = """
+    @page {size: letter landscape;margin: 2cm;}
+    """
+
+    html_text = f"<html><head><style>{styling}</style></head><body>{html_text}</body></html>"
 
     # Convert HTML to PDF
     result = convert_html_to_pdf(html_text, pdf_file_path)
