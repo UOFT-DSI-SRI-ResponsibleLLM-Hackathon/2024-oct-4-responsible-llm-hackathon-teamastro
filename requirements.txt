@@ -2,3 +2,5 @@ streamlit
 PyPDF2
 openai
 dotenv
+markdown2
+xhtml2pdf

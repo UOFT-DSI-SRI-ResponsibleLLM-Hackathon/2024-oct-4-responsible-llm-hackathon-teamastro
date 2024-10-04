@@ -33,8 +33,11 @@ def read_file(file):
     else:
         return "Unsupported file type"
 
-generate_button = st.button("Generate Analysis")
+def response_to_markdown(markdown_text):
+    return pt.convert_markdown_to_html(markdown_text)
 
+generate_button = st.button("Generate Analysis")
+html_text = ""
 if generate_button:
     if not openai_api_key:
         st.info("Please add your OpenAI API key in the sidebar to continue.")
@@ -68,11 +71,11 @@ if generate_button:
             max_tokens=10000)
 
         st.write("### Suggestions")
-        st.write(response.choices[0].message.content)
+        st.write(response.choices[0].message.content)  
+        html_text = response_to_markdown(response.choices[0].message.content)
+        pt.markdown_to_pdf(html_text, 'output_resume.pdf')
+        
 
-pdf_button = st.button("Generate pdf")
 
-if pdf_button:
-    print(response.choices[0].message.content)
 
     
