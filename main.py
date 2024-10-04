@@ -82,11 +82,18 @@ if st.session_state.generate_button:
 
         st.write("### Suggestions")
         st.write(st.session_state.response.choices[0].message.content)  
+        html_text = response_to_markdown(st.session_state.response.choices[0].message.content)
+        pt.markdown_to_pdf(html_text, 'output_resume.pdf')
 
         st.write("### Download Resume")
 
-        pdf_button = st.button("Download Resume PDF")
-
-        if pdf_button:
-            html_text = response_to_markdown(st.session_state.response.choices[0].message.content)
-            pt.markdown_to_pdf(html_text, 'output_resume.pdf')
+        # Provide a download button for the generated PDF
+        pdf_path = 'output_resume.pdf'
+        with open(pdf_path, "rb") as pdf_file:
+            pdf_bytes = pdf_file.read()
+            st.download_button(
+                label="Download resume PDF",
+                data=pdf_bytes,
+                file_name="generated_resume.pdf",
+                mime="application/pdf"
+            )
