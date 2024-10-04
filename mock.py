@@ -6,6 +6,7 @@ import os
 import dotenv
 dotenv.load_dotenv()
 import json
+from typing import List, Dict
 
 
 def read_pdf(file):
@@ -127,18 +128,82 @@ class MockInterviewer:
         mock_interviewer.resume_summary = data["resume_summary"]
         mock_interviewer.question_ideas = data["question_ideas"]
         return mock_interviewer
-        
+
+
+class MockInterviewee:
+    def __init__(self, api_key=None, max_tokens=10000):
+        if api_key is None:
+            api_key = os.environ.get("OPENAI_API_KEY")
+        self.client = OpenAI(api_key=api_key)
+        self.max_tokens = max_tokens
+        self.resume_summary = ""
+        self.job_summary = ""
+
+    def _get_response(self, prompt):
+        response = self.client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a job candidate participating in a mock interview."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=self.max_tokens
+        )
+        return response.choices[0].message.content
+
+    def prepare_for_interview(self, resume_summary: str, job_summary: str):
+        self.resume_summary = resume_summary
+        self.job_summary = job_summary
+
+    def answer_question(self, question: str) -> str:
+        prompt = f"""
+        You are a job candidate interviewing for the following position:
+        {self.job_summary}
+
+        Your resume summary:
+        {self.resume_summary}
+
+        The interviewer has asked you the following question:
+        {question}
+
+        Please provide a thoughtful and relevant answer to this question, showcasing your skills and experience as described in your resume summary. Keep your answer concise but informative.
+
+        Your answer:
+        """
+        return self._get_response(prompt)
+
+    def run_mock_interview(self, questions: List[str]) -> List[Dict[str, str]]:
+        interview_log = []
+        for question in questions:
+            answer = self.answer_question(question)
+            interview_log.append({"question": question, "answer": answer})
+        return interview_log
+
+
+def conduct_mock_interview(interviewer: MockInterviewer, interviewee: MockInterviewee) -> List[Dict[str, str]]:
+    interview_script = interviewer.run_mock_interview()
+    questions = [q.strip() for q in interview_script.split('\n') if q.strip().endswith('?')]
+    return interviewee.run_mock_interview(questions)
+
 
 if __name__ == '__main__':
     job_posting_text = read_pdf("data/job_posting.pdf")
     resume_text = read_pdf("data/resume.pdf")
 
     cached_data = "mock_interview_data.json"
-    if not op.exists(cached_data):
+    if not os.path.exists(cached_data):
         mock_interviewer = MockInterviewer()
         mock_interviewer.preprocess(job_posting_text, resume_text)
         mock_interviewer.save(cached_data)
     else:
-        mock_interviewer = MockInterviewer.load("mock_interview_data.json")
-    response = mock_interviewer.run_mock_interview()
-    print(response)
+        mock_interviewer = MockInterviewer.load(cached_data)
+
+    mock_interviewee = MockInterviewee()
+    mock_interviewee.prepare_for_interview(mock_interviewer.resume_summary, mock_interviewer.job_summary)
+
+    interview_log = conduct_mock_interview(mock_interviewer, mock_interviewee)
+
+    print("Mock Interview Results:")
+    for entry in interview_log:
+        print(f"Q: {entry['question']}")
+        print(f"A: {entry['answer']}")
+        print()
