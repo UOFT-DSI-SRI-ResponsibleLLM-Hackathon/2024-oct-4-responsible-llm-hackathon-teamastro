@@ -16,7 +16,6 @@ def read_pdf(file):
         text += page.extract_text()
     return text
 
-
 class MockInterviewer:
     def __init__(self, api_key=None, max_tokens=10000):
         if api_key is None: 

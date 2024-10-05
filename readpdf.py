@@ -14,6 +14,6 @@ def pdf_to_text(pdf_path):
     return text
 
 # Example usage
-pdf_path = './data/data (1).pdf'
+pdf_path = './data/job_posting.pdf'
 text = pdf_to_text(pdf_path)
 print(text)

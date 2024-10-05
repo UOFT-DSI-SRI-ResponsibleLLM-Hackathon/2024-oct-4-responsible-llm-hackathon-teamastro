@@ -4,7 +4,7 @@ import streamlit as st
 import os
 from openai import OpenAI
 import producepdf as pt
-from streamlit_option_menu import option_menu
+# from streamlit_option_menu import option_menu
 import re
 
 import PyPDF2
@@ -143,6 +143,38 @@ class Agent:
             "revised_resume_parsed": revised_resume_parsed
         }
         return res
+
+    def start_mock_interview(self, job_summary, resume_summary):
+        prompt = f"""Hello ChatGPT, I would like to be interviewed for a job. 
+        
+        Here is a summary of the job you are interviewing me for:
+        {job_summary}
+        
+        Here is a summary of my resume:
+        {resume_summary} 
+
+        I would like for the interview to be structured as a question-and-answer session, with each question followed by a response from me.
+
+        After I have answered all of the questions, I would like for you to evaluate my responses and make a final hiring recommendation based on my performance in the interview.
+
+        At the very end, give an expansive evaluation, and include any recommendations that you would have on improving my answers
+
+        This is a real time, turn based exercise. After each question, you should stop, let me input a response for each question in turn. 
+        """
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant that conducts mock interviews."},
+            {"role": "user", "content": prompt}
+        ]
+        return self._conversation(messages)
+
+    def _conversation(self, messages):
+        response = self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{ 'role': m['role'], 'content': m['content'] } for m in messages],
+            max_tokens=self.max_tokens
+        )
+        messages.append({"role": "assistant", "content": response.choices[0].message.content})
+        return messages
     
 # ============
 #   main app
@@ -150,66 +182,74 @@ class Agent:
 
 st.set_page_config(page_title="AI Resume Builder", page_icon="📝")
 
-#create the side bar
-with st.sidebar:
-    selected = option_menu("Options", 
-                           ["Resume builder",
-                            "Mock interview", 
-                            ], 
-                            menu_icon='robot',
-                            icons=['chat-dots-fill', 'image-fill', 'textarea-t', 'patch-question-fill'],
-                            default_index=0
-                           )
+# Initialize session state variables
+if 'generate_button' not in st.session_state:
+    st.session_state.generate_button = False
+if 'response' not in st.session_state:
+    st.session_state.response = {}
+if 'messages' not in st.session_state:
+    st.session_state.messages = None
 
-if selected == "Resume builder":
-    st.title("📝 Resume Builder")
+st.title("📝 Resume Builder")
 
-    uploaded_resume = st.file_uploader("Upload your resume", type=["pdf", "txt"])
-    uploaded_job_posting = st.file_uploader("Upload the job posting", type=["pdf", "txt"])
+uploaded_resume = st.file_uploader("Upload your resume", type=["pdf", "txt"])
+uploaded_job_posting = st.file_uploader("Upload the job posting", type=["pdf", "txt"])
 
-    # Initialize session state variables
-    if 'generate_button' not in st.session_state:
-        st.session_state.generate_button = False
-    if 'response' not in st.session_state:
-        st.session_state.response = {}
+agent = Agent()
 
-    generate_button = st.button("Generate Analysis")
-    if generate_button:
-        st.session_state.generate_button = True
+generate_button = st.button("Generate Analysis")
+if generate_button:
+    st.session_state.generate_button = True
 
-    if st.session_state.generate_button:
-        if not openai_api_key:
-            st.info("Please add your OpenAI API key in the environment to continue.")
-        elif not uploaded_resume or not uploaded_job_posting:
-            st.info("Please upload both your resume and the job posting to proceed.")
-        else:
-            with st.spinner("Generating analysis..."):
-                resume_text = read_file(uploaded_resume)
-                job_posting_text = read_file(uploaded_job_posting)
+if st.session_state.generate_button:
+    if not openai_api_key:
+        st.info("Please add your OpenAI API key in the environment to continue.")
+    elif not uploaded_resume or not uploaded_job_posting:
+        st.info("Please upload both your resume and the job posting to proceed.")
+    else:
+        with st.spinner("Generating analysis..."):
+            resume_text = read_file(uploaded_resume)
+            job_posting_text = read_file(uploaded_job_posting)
 
-                if st.session_state.response != {}:
-                    pass
-                else:
-                    agent = Agent()
-                    response = agent.analyze(resume_text, job_posting_text)
-                    st.session_state.response = response
+            if st.session_state.response != {}:
+                pass
+            else:
+                response = agent.analyze(resume_text, job_posting_text)
+                st.session_state.response = response
 
-            st.write("### Analysis")
-            response = st.session_state.response
-            st.write(response['analysis'])  
-            html_text = response_to_markdown(response['revised_resume_parsed'])
-            pt.markdown_to_pdf(html_text, 'output_resume.pdf')
+        st.write("### Analysis")
+        response = st.session_state.response
+        st.write(response['analysis'])  
+        html_text = response_to_markdown(response['revised_resume_parsed'])
+        pt.markdown_to_pdf(html_text, 'output_resume.pdf')
 
-            st.write("### Download Resume")
+        st.write("### Download Resume")
 
-            # Provide a download button for the generated PDF
-            pdf_path = 'output_resume.pdf'
-            with open(pdf_path, "rb") as pdf_file:
-                pdf_bytes = pdf_file.read()
-                st.download_button(
-                    label="Download resume PDF",
-                    data=pdf_bytes,
-                    file_name="generated_resume.pdf",
-                    mime="application/pdf"
-                )
+        # Provide a download button for the generated PDF
+        pdf_path = 'output_resume.pdf'
+        with open(pdf_path, "rb") as pdf_file:
+            pdf_bytes = pdf_file.read()
+            st.download_button(
+                label="Download resume PDF",
+                data=pdf_bytes,
+                file_name="generated_resume.pdf",
+                mime="application/pdf"
+            )
+
+        # start mock interview
+        st.write("### Mock Interview")
+        st.session_state.do_mock_interview = True
+        if st.session_state.messages is None:
+            st.session_state.messages = agent.start_mock_interview(response['job_summary'], response['revised_resume_parsed'])
+        for message in st.session_state.messages[2:]:
+            with st.chat_message(message['role']):
+                st.markdown(message['content'])
+        if prompt := st.chat_input("Your response"):
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            messages = agent._conversation(st.session_state.messages)
+            with st.chat_message('user'):
+                st.markdown(prompt)
+            with st.chat_message('assistant'):
+                st.markdown(messages[-1]['content'])
+        
 
