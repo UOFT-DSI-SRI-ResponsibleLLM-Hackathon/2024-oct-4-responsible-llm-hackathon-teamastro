@@ -4,3 +4,4 @@ openai
 python-dotenv
 markdown2
 xhtml2pdf
+streamlit_option_menu
