@@ -85,7 +85,7 @@ class MockInterviewer:
         self._analyze_resume(resume_text)
         self._brainstorm_interview_ideas()
     
-    def run_mock_interview(self):
+    def start_interview(self):
         prompt = f"""
         Hello ChatGPT, you are the interviewer for the following position
         
@@ -94,7 +94,7 @@ class MockInterviewer:
         I want you to run an interview session with me. Make sure you structure it as a question-and-answer session, 
         with each question followed by a response from me.
 
-        Make it clear when the interview is completed. At the end, I would like for you to evaluate my responses and make a final hiring recommendation based on my performance in the interview. At the very end, give an expansive evaluation, and include any recommendations that you would have on improving my answers
+        Make it clear when the interview is completed by saying OVER. At the end, I would like for you to evaluate my responses and make a final hiring recommendation based on my performance in the interview. At the very end, give an expansive evaluation, and include any recommendations that you would have on improving my answers
 
         This is a real time, turn based exercise. After each question, you should stop, let me input a response for each question in turn. Do not say anything that
         will make me feel you are not a real interviewer.
@@ -106,6 +106,13 @@ class MockInterviewer:
         {self.question_ideas}
         
         Let's start the interview session now.
+        """
+        response = self._get_response(prompt)
+        return response
+
+    def ask_question(self):
+        prompt = f"""
+        Question:
         """
         response = self._get_response(prompt)
         return response
@@ -139,11 +146,31 @@ class MockInterviewee:
         self.resume_summary = ""
         self.job_summary = ""
 
-    def _get_response(self, prompt):
+    def _get_response(self, prompt, history):
+        messages = [
+            {"role": "system", "content": "You are an interviewee for a job position. Try to respond to the questions as best as you can."},
+        ]
+        for entry in history:
+            messages += [
+                {"role": "assistant", "content": entry["question"]},
+                {"role": "user", "content": entry["answer"]}
+            ]
+
+        messages += [
+            {"role": "user", "content": prompt}
+        ]
+        
         response = self.client.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a job candidate participating in a mock interview."},
+                {"role": "system", "content": "You are an interviewee for a job position. Try to respond to the questions as best as you can."},
+            ]
+            for entry in history:
+                messages += [
+                    {"role": "assistant", "content": entry["question"]},
+                    {"role": "user", "content": entry["answer"]}
+                ]
+            messages += [
                 {"role": "user", "content": prompt}
             ],
             max_tokens=self.max_tokens
@@ -154,7 +181,7 @@ class MockInterviewee:
         self.resume_summary = resume_summary
         self.job_summary = job_summary
 
-    def answer_question(self, question: str) -> str:
+    def answer_question(self, question: str, history = []) -> str:
         prompt = f"""
         You are a job candidate interviewing for the following position:
         {self.job_summary}
@@ -162,28 +189,35 @@ class MockInterviewee:
         Your resume summary:
         {self.resume_summary}
 
-        The interviewer has asked you the following question:
+        Your previous questions and answers with the interviewer:
+
+        """
+        + "\n".join([f"Q: {entry['question']}\nA: {entry['answer']}" for entry in self.history]) + \
+        f"""
+
+        The interviewer has now asked you the following question:
         {question}
 
         Please provide a thoughtful and relevant answer to this question, showcasing your skills and experience as described in your resume summary. Keep your answer concise but informative.
 
         Your answer:
         """
-        return self._get_response(prompt)
+        response = self._get_response(prompt)
+        self.history.append({"question": question, "answer": response})
+        return response
 
-    def run_mock_interview(self, questions: List[str]) -> List[Dict[str, str]]:
-        interview_log = []
-        for question in questions:
-            answer = self.answer_question(question)
-            interview_log.append({"question": question, "answer": answer})
-        return interview_log
+    def forget_history(self):
+        self.history = []
 
 
 def conduct_mock_interview(interviewer: MockInterviewer, interviewee: MockInterviewee) -> List[Dict[str, str]]:
-    interview_script = interviewer.run_mock_interview()
+    question = interviewer.start_interview()
+    answer = interviewee.answer_question(question)
+    history = [{"question": question, "answer": answer}]
+    
+    interview_script = interviewer.ask_question()
     questions = [q.strip() for q in interview_script.split('\n') if q.strip().endswith('?')]
     return interviewee.run_mock_interview(questions)
-
 
 if __name__ == '__main__':
     job_posting_text = read_pdf("data/job_posting.pdf")
